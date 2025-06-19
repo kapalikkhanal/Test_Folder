@@ -1,0 +1,31 @@
+{
+  "name": "Server Status Checker",
+  "short_name": "ServerChecker",
+  "description": "Check if your server is running and accessible",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "./next.svg",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "./next.svg",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "./next.svg",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "./next.svg",
+      "sizes": "144x144",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,18 +1,56 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 
 export default function ServerChecker() {
-  const [protocol, setProtocol] = useState("https" > "https");
+  const [protocol, setProtocol] = useState("https");
   const [url, setUrl] = useState("");
   const [port, setPort] = useState("3001");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isOnline, setIsOnline] = useState(true);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  // Check if the app is installed as PWA
+  useEffect(() => {
+    const checkInstallation = () => {
+      // Check if running in standalone mode (installed PWA)
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      // Check if running in Safari fullscreen mode
+      const isSafariStandalone = 'standalone' in window.navigator && window.navigator.standalone;
+      
+      setIsInstalled(isStandalone || isSafariStandalone);
+    };
+
+    checkInstallation();
+  }, []);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Set initial state
+    setIsOnline(navigator.onLine);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const checkServer = async () => {
     if (!url || !port) {
       setError("Please enter URL and port");
+      return;
+    }
+
+    if (!isOnline) {
+      setError("You are currently offline. Please check your internet connection.");
       return;
     }
 
@@ -31,10 +69,17 @@ export default function ServerChecker() {
           ? new (require("https").Agent)({ rejectUnauthorized: false })
           : undefined;
 
-      const response = await axios.get(endpoint, { httpsAgent });
+      const response = await axios.get(endpoint, { 
+        httpsAgent,
+        timeout: 10000 // 10 second timeout
+      });
       setResult(response.data);
     } catch (err) {
-      setError(err.message || "Failed to connect to server");
+      if (err.code === 'ECONNABORTED') {
+        setError("Request timed out. The server might be slow or unreachable.");
+      } else {
+        setError(err.message || "Failed to connect to server");
+      }
       console.error("Error checking server:", err);
     } finally {
       setLoading(false);
@@ -52,7 +97,50 @@ export default function ServerChecker() {
             <p className="mt-2 text-gray-600">
               Check if your server is running and accessible
             </p>
+            
+            {/* PWA Status Indicators */}
+            <div className="mt-4 flex justify-center space-x-4">
+              {isInstalled && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Installed
+                </span>
+              )}
+              
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                isOnline 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M17.778 8.222c-4.296-4.296-11.26-4.296-15.556 0A1 1 0 01.808 6.808c5.076-5.077 13.308-5.077 18.384 0a1 1 0 01-1.414 1.414zM14.95 11.05a7 7 0 00-9.9 0 1 1 0 01-1.414-1.414 9 9 0 0112.728 0 1 1 0 01-1.414 1.414zM12.12 13.88a3 3 0 00-4.242 0 1 1 0 01-1.415-1.415 5 5 0 017.072 0 1 1 0 01-1.415 1.415zM9 16a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
+            </div>
           </div>
+
+          {!isOnline && (
+            <div className="mb-6 p-4 bg-yellow-50 rounded-md border border-yellow-200">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    You are currently offline
+                  </h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>Server checking functionality requires an internet connection.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-6">
             {/* Protocol Selector */}
@@ -119,9 +207,9 @@ export default function ServerChecker() {
             <div>
               <button
                 onClick={checkServer}
-                disabled={loading}
+                disabled={loading || !isOnline}
                 className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                  loading ? "opacity-75 cursor-not-allowed" : ""
+                  loading || !isOnline ? "opacity-75 cursor-not-allowed" : ""
                 }`}
               >
                 {loading ? (
@@ -148,6 +236,8 @@ export default function ServerChecker() {
                     </svg>
                     Checking...
                   </>
+                ) : !isOnline ? (
+                  "Offline"
                 ) : (
                   "Check Server"
                 )}
