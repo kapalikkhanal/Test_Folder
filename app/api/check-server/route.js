@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
-import https from 'https';
-import axios from 'axios';
+import { NextResponse } from "next/server";
+import https from "https";
+import axios from "axios";
 
 export async function POST(request) {
   try {
@@ -23,9 +23,10 @@ export async function POST(request) {
         ? new https.Agent({ rejectUnauthorized: false })
         : undefined;
 
+    console.log(endpoint);
     const response = await axios.get(endpoint, {
       httpsAgent,
-      timeout: 10000 // 10 second timeout
+      timeout: 10000, // 10 second timeout
     });
 
     return NextResponse.json(response.data);
@@ -33,8 +34,9 @@ export async function POST(request) {
     let errorMessage = "Failed to connect to server";
     let statusCode = 500;
 
-    if (err.code === 'ECONNABORTED') {
-      errorMessage = "Request timed out. The server might be slow or unreachable.";
+    if (err.code === "ECONNABORTED") {
+      errorMessage =
+        "Request timed out. The server might be slow or unreachable.";
       statusCode = 408;
     } else if (err.response) {
       errorMessage = `Server responded with status ${err.response.status}`;
@@ -46,9 +48,6 @@ export async function POST(request) {
       errorMessage = err.message || errorMessage;
     }
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: statusCode }
-    );
+    return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
 }
